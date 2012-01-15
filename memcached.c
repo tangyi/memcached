@@ -964,7 +964,7 @@ static size_t tokenize_command(char *command, token_t *tokens, const size_t max_
 
     assert(command != NULL && tokens != NULL && max_tokens > 1);
 
-    for (s = e = command; ntokens < max_tokens - 1; ++e) {
+    for (s = e = command, ntokens = 0; ntokens < max_tokens - 1; ++e) {
         if (*e == ' ') {
             if (s != e) {
                 tokens[ntokens].value = s;
@@ -974,7 +974,7 @@ static size_t tokenize_command(char *command, token_t *tokens, const size_t max_
             }
             s = e + 1;
         }
-        else if (*e == '\0') {
+        else if (*e == '\0') {                              /* the last one */
             if (s != e) {
                 tokens[ntokens].value = s;
                 tokens[ntokens].length = e - s;
@@ -1319,7 +1319,7 @@ static inline void process_get_command(conn *c, token_t *tokens, size_t ntokens,
             }
 
             key_token++;
-        }
+        } /* while */
 
         /*
          * If the command string hasn't been fully processed, get the next set
@@ -1377,7 +1377,7 @@ static void process_update_command(conn *c, token_t *tokens, const size_t ntoken
     assert(c != NULL);
 
     set_noreply_maybe(c, tokens, ntokens);
-
+    /* KEY_TOKEN == 1, too long */
     if (tokens[KEY_TOKEN].length > KEY_MAX_LENGTH) {
         out_string(c, "CLIENT_ERROR bad command line format");
         return;
@@ -1647,7 +1647,7 @@ static void process_command(conn *c, char *command) {
         out_string(c, "SERVER_ERROR out of memory preparing response");
         return;
     }
-
+    // 把command分成一个一个token.
     ntokens = tokenize_command(command, tokens, MAX_TOKENS);
     if (ntokens >= 3 &&
         ((strcmp(tokens[COMMAND_TOKEN].value, "get") == 0) ||
@@ -1662,7 +1662,8 @@ static void process_command(conn *c, char *command) {
                 (strcmp(tokens[COMMAND_TOKEN].value, "prepend") == 0 && (comm = NREAD_PREPEND)) ||
                 (strcmp(tokens[COMMAND_TOKEN].value, "append") == 0 && (comm = NREAD_APPEND)) )) {
 
-        process_update_command(c, tokens, ntokens, comm, false);
+        process_update_command(c, tokens, ntokens, comm, false); /* comm
+                                                                  * command type */
 
     } else if ((ntokens == 7 || ntokens == 8) && (strcmp(tokens[COMMAND_TOKEN].value, "cas") == 0 && (comm = NREAD_CAS))) {
 
@@ -2440,7 +2441,7 @@ static int server_socket(const int port, const bool is_udp) {
           listen_conn_add->next = listen_conn;
           listen_conn = listen_conn_add;
         }
-    }
+    } /* for ai */
 
     freeaddrinfo(ai);
 
@@ -2833,31 +2834,31 @@ int main (int argc, char **argv) {
         case 'p':
             settings.port = atoi(optarg);
             break;
-        case 's':
+        case 's':                                           /*  */
             settings.socketpath = optarg;
             break;
-        case 'm':
+        case 'm':                                           /* max bytes G */
             settings.maxbytes = ((size_t)atoi(optarg)) * 1024 * 1024;
             break;
         case 'M':
             settings.evict_to_free = 0;
             break;
-        case 'c':
+        case 'c':                                           /* max connections */
             settings.maxconns = atoi(optarg);
             break;
-        case 'h':
+        case 'h':                                           /* help */
             usage();
             exit(EXIT_SUCCESS);
         case 'i':
             usage_license();
             exit(EXIT_SUCCESS);
-        case 'k':
+        case 'k':                                           /* lock memory */
             lock_memory = true;
             break;
-        case 'v':
+        case 'v':                                           /* -vvv */
             settings.verbose++;
             break;
-        case 'l':
+        case 'l':                                           /* ??? */
             settings.inter= strdup(optarg);
             break;
         case 'd':
@@ -3011,13 +3012,13 @@ int main (int argc, char **argv) {
     }
 
     /* initialize main thread libevent instance */
-    main_base = event_init();
+    main_base = event_init();                               /* event_base_new() */
 
     /* initialize other stuff */
     item_init();
-    stats_init();
+    stats_init();                                           /* 做一些统计 */
     assoc_init();
-    conn_init();
+    conn_init();                                     /* connect pool */
     /* Hacky suffix buffers. */
     suffix_init();
     slabs_init(settings.maxbytes, settings.factor, preallocate);
@@ -3064,7 +3065,7 @@ int main (int argc, char **argv) {
     /* create the listening socket, bind it, and init */
     if (settings.socketpath == NULL) {
         errno = 0;
-        if (settings.port && server_socket(settings.port, 0)) {
+        if (settings.port && server_socket(settings.port, 0 /*isudp?*/ )) {
             fprintf(stderr, "failed to listen on TCP port %d\n", settings.port);
             if (errno != 0)
                 perror("tcp listen");
@@ -3079,7 +3080,7 @@ int main (int argc, char **argv) {
 
         /* create the UDP listening socket and bind it */
         errno = 0;
-        if (settings.udpport && server_socket(settings.udpport, 1)) {
+        if (settings.udpport && server_socket(settings.udpport, 1 /*isudp?*/)) {
             fprintf(stderr, "failed to listen on UDP port %d\n", settings.udpport);
             if (errno != 0)
                 perror("udp listen");
