@@ -43,18 +43,20 @@ int daemon(int nochdir, int noclose)
 {
     int fd;
 
+    // change ppid to 1
     switch (fork()) {
     case -1:
         return (-1);
     case 0:
         break;
-    default:
+    default:                                                /* 父进程退出 */
         _exit(EXIT_SUCCESS);
     }
 
     if (setsid() == -1)
         return (-1);
 
+    // chdir("/");
     if (nochdir == 0) {
         if(chdir("/") != 0) {
             perror("chdir");
@@ -62,6 +64,7 @@ int daemon(int nochdir, int noclose)
         }
     }
 
+    // redirect stdin, stdout, stderr
     if (noclose == 0 && (fd = open("/dev/null", O_RDWR, 0)) != -1) {
         if(dup2(fd, STDIN_FILENO) < 0) {
             perror("dup2 stdin");

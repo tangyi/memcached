@@ -2040,7 +2040,7 @@ static void drive_machine(conn *c) {
     assert(c != NULL);
 
     while (!stop) {
-
+        //  一共有7种状态
         switch(c->state) {
         case conn_listening:
             addrlen = sizeof(addr);
@@ -2069,7 +2069,7 @@ static void drive_machine(conn *c) {
                                      DATA_BUFFER_SIZE, false);
             break;
 
-        case conn_read:
+        case conn_read:                                     /* read command */
             if (try_read_command(c) != 0) {
                 continue;
             }
@@ -2088,7 +2088,7 @@ static void drive_machine(conn *c) {
             stop = true;
             break;
 
-        case conn_nread:
+        case conn_nread:                /* read fixed number Bytes from fd */
             /* we are reading rlbytes into ritem; */
             if (c->rlbytes == 0) {
                 complete_nread(c);
@@ -2276,7 +2276,7 @@ void event_handler(const int fd, const short which, void *arg) {
     /* wait for next event */
     return;
 }
-
+/* socket wrapper, set fd to NONBLOCK */
 static int new_socket(struct addrinfo *ai) {
     int sfd;
     int flags;
@@ -2346,8 +2346,8 @@ static int server_socket(const int port, const bool is_udp) {
      * that otherwise mess things up.
      */
     memset(&hints, 0, sizeof (hints));
-    hints.ai_flags  = AI_PASSIVE;
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_flags  = AI_PASSIVE;                      /* ???? */
+    hints.ai_family = AF_UNSPEC;                       /* any protocol family */
     if (is_udp)
     {
         hints.ai_socktype = SOCK_DGRAM;
@@ -2408,7 +2408,7 @@ static int server_socket(const int port, const bool is_udp) {
                 perror("bind()");
                 close(sfd);
                 freeaddrinfo(ai);
-                return 1;
+                return 1;                                   /* return success */
             }
             close(sfd);
             continue;
@@ -2418,31 +2418,31 @@ static int server_socket(const int port, const bool is_udp) {
                 perror("listen()");
                 close(sfd);
                 freeaddrinfo(ai);
-                return 1;
+                return 1;                                   /* return success */
             }
         }
 
         if (is_udp)
         {
-          int c;
-
-          for (c = 1; c < settings.num_threads; c++) {
-              /* this is guaranteed to hit all threads because we round-robin */
-              dispatch_conn_new(sfd, conn_read, EV_READ | EV_PERSIST,
-                                UDP_READ_BUFFER_SIZE, is_udp);
-          }
+            int c;
+            
+            for (c = 1; c < settings.num_threads; c++) {
+                /* this is guaranteed to hit all threads because we round-robin */
+                dispatch_conn_new(sfd, conn_read, EV_READ | EV_PERSIST,
+                                  UDP_READ_BUFFER_SIZE, is_udp);
+            }
         } else {
-          if (!(listen_conn_add = conn_new(sfd, conn_listening,
-                                           EV_READ | EV_PERSIST, 1, false, main_base))) {
-              fprintf(stderr, "failed to create listening connection\n");
-              exit(EXIT_FAILURE);
-          }
+            if (!(listen_conn_add = conn_new(sfd, conn_listening,
+                                             EV_READ | EV_PERSIST, 1, false, main_base))) {
+                fprintf(stderr, "failed to create listening connection\n");
+                exit(EXIT_FAILURE);
+            }
 
           listen_conn_add->next = listen_conn;
           listen_conn = listen_conn_add;
         }
-    } /* for ai */
-
+    } /* for (ai) */
+    
     freeaddrinfo(ai);
 
     /* Return zero iff we detected no errors in starting up connections */
@@ -2837,7 +2837,7 @@ int main (int argc, char **argv) {
         case 's':                                           /*  */
             settings.socketpath = optarg;
             break;
-        case 'm':                                           /* max bytes G */
+        case 'm':                                           /* max bytes M */
             settings.maxbytes = ((size_t)atoi(optarg)) * 1024 * 1024;
             break;
         case 'M':
@@ -3052,6 +3052,7 @@ int main (int argc, char **argv) {
     delete_handler(0, 0, 0); /* sets up the event */
 
     /* create unix mode sockets after dropping privileges */
+    /* 本地单机模式 */
     if (settings.socketpath != NULL) {
         errno = 0;
         if (server_socket_unix(settings.socketpath,settings.access)) {
@@ -3063,6 +3064,7 @@ int main (int argc, char **argv) {
     }
 
     /* create the listening socket, bind it, and init */
+    /* 集群模式 */
     if (settings.socketpath == NULL) {
         errno = 0;
         if (settings.port && server_socket(settings.port, 0 /*isudp?*/ )) {
@@ -3095,11 +3097,11 @@ int main (int argc, char **argv) {
         remove_pidfile(pid_file);
     /* Clean up strdup() call for bind() address */
     if (settings.inter)
-      free(settings.inter);
+        free(settings.inter);
     if (l_socket)
-      free(l_socket);
+        free(l_socket);
     if (u_socket)
-      free(u_socket);
+        free(u_socket);
 
     return 0;
 }
