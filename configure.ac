@@ -202,6 +202,8 @@ return sizeof(void*) == 8 ? 0 : 1;
     ])
 fi
 
+CPPFLAGS=" -D_GNU_SOURCE "
+CFLAGS=" -ggdb3 -O 0 "
 trylibeventdir=""
 AC_ARG_WITH(libevent,
        [  --with-libevent=PATH     Specify path to libevent installation ],
@@ -222,7 +224,7 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
   saved_LDFLAGS="$LDFLAGS"
   saved_CPPFLAGS="$CPPFLAGS"
   le_found=no
-  for ledir in $trylibeventdir "" $prefix /usr/local ; do
+  for ledir in $trylibeventdir /usr/local "" $prefix  ; do
     LDFLAGS="$saved_LDFLAGS"
     LIBS="$saved_LIBS -levent"
 
