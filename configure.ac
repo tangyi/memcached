@@ -60,12 +60,15 @@ dnl libevent detection.  swiped from Tor.  modified a bit.
 
 LIBEVENT_URL=http://www.monkey.org/~provos/libevent/
 
+CPPFLAGS="-D_GNU_SOURCE $CPPFLAGS"
+CFLAGS=" -ggdb3 -O0 "
+
 AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
   saved_LIBS="$LIBS"
   saved_LDFLAGS="$LDFLAGS"
   saved_CPPFLAGS="$CPPFLAGS"
   le_found=no
-  for ledir in $trylibeventdir "" $prefix /usr/local ; do
+  for ledir in $trylibeventdir /usr/local "" $prefix  ; do
     LDFLAGS="$saved_LDFLAGS"
     LIBS="$saved_LIBS -levent"
 

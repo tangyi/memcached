@@ -2034,7 +2034,7 @@ static void drive_machine(conn *c) {
     int sfd, flags = 1;
     socklen_t addrlen;
     struct sockaddr_storage addr;
-    int nreqs = settings.reqs_per_event;
+    int nreqs = settings.reqs_per_event;                    /* default 20 */
     int res;
 
     assert(c != NULL);
@@ -2070,11 +2070,12 @@ static void drive_machine(conn *c) {
             break;
 
         case conn_read:                                     /* read command */
-            if (try_read_command(c) != 0) {
+            if (try_read_command(c) != 0) {                 /* return 0, need
+                                                             * more bytes */
                 continue;
             }
             /* Only process nreqs at a time to avoid starving other
-               connections */
+               connections , default 20 */
             if (--nreqs && (c->udp ? try_read_udp(c) : try_read_network(c)) != 0) {
                 continue;
             }
